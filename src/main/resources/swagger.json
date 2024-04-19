@@ -1,0 +1,1378 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Finion Capital API",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Finion Development",
+      "url": "https://www.finion.dev",
+      "email": "finion-dev@sportalliance.com"
+    },
+    "description": "## API Reference\nThe Finion Capital API offers integration for the `MemberCash` and `Finion DirectDebit` products, enabling easy transfer of direct debit runs to the bank.\n\n### Concepts \n\n#### Debt Claim \nDebt Claims are the heart of the domain in Finion Capital, constituting the Debt-Claim Management System and representing a single, atomic claim of money against a debtor.\nAll debt claims against a single debtor will be summed up and collected as a single transaction from the debtor's account.\n\n### Authentication\nThe Finion Capital API uses persistent key authentication, which is separate for each client. Keys are generated during the onboarding process. To authenticate properly, you have to send the key in the 'x-api-key' header. We will then validate the key and verify whether it is not only valid but also matches the current client.\n\n### Idempotency \nA unique payment identifier, along with unique identifiers for individual debt claims, ensures the idempotency of the offered payment service. These identifiers are part of the PaymentIntent payload and are used to de-duplicate payments.\n"
+  },
+  "servers": [
+    {
+      "url": "https://api.finion-capital.com",
+      "description": "Live/Production",
+      "variables": {}
+    },
+    {
+      "url": "https://api.sandbox.finion-capital.com",
+      "description": "Sandbox/Test",
+      "variables": {}
+    }
+  ],
+  "security": [
+    {
+      "ApiKey": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "payments",
+      "description": "Both the `MemberCash` and `Finion DirectDebit` products allow submission of payment runs that utilize the SEPA Direct Debit payment scheme. This API allows the management of the payment run submission process.\n",
+      "x-displayName": "Payment API"
+    },
+    {
+      "name": "dunning",
+      "description": "`MemberCash` offering includes the management of dunning runs. This API provides an overview of the status of the debt collection process.\n",
+      "x-displayName": "Dunning API"
+    },
+    {
+      "name": "chargeback",
+      "x-displayName": "Chargeback API",
+      "description": "`MemberCash` specific API for getting Chargebacks overview.\n"
+    },
+    {
+      "name": "lifecycle",
+      "x-displayName": "API Lifecycle & versioning",
+      "x-traitTag": true,
+      "description": "As our platform and products evolve, so too does our API. We are committed to continuous improvement, while ensuring minimal disruptions to your operations and integration efforts.\n\n### Minor Changes\nAligned with this commitment, we maintain backward compatibility for all minor updates. Any changes from version 1.x to 1.y are designed to enhance functionalities without disrupting your current integration. These backward compatible changes include extending our API with new endpoints and resources and also extending existing responses with additional data.\n\n### Major Changes\nBackward-incompatible changes signify a major API update, transitioning from 1.x to 2.0. We acknowledge that such changes may necessitate adjustments to your API integration. Therefore, these changes are not made lightly.\n\nWhen such an update occurs, we will ensure providing timely communication about the updates. Our team will take a proactive approach, extending their support to guide you through the transition, complete with comprehensive documentation. \n\nUnderstanding that a transition period is essential for a smooth shift, we will continue supporting the old API version for six months after the deployment of the major update. This grace period ensures you have sufficient time to adapt to the new version. Following this period, the old version (1.x series) will be deprecated, totally discontinued, and will eventually become unavailable.\n"
+    },
+    {
+      "name": "changelog",
+      "x-displayName": "Changelog",
+      "x-traitTag": true,
+      "description": "### v1.0.0  * Launched Payment API v1\n"
+    }
+  ],
+  "paths": {
+    "/v1/payments": {
+      "post": {
+        "summary": "Make a payment intent",
+        "description": "After a basic validation of the payment parameters, all contained direct debits are asynchronously processed and a PENDING status is returned.\nStatus-Changes of the submitted payment intent will be asynchronously communicated via the webhook-endpoint that was individually setup'd for the client.\nRepeated submissions of the same payment (identified by the `paymentReference`) are not possible and will be rejected and asynchronously communicated via the webhook.",
+        "operationId": "submitPayment",
+        "tags": [
+          "payments"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentIntent"
+              },
+              "example": {
+                "paymentReference": "33540612-6170-4a97-818d-15636ce3effe",
+                "product": "MEMBERCASH",
+                "accountNumber": "20123400",
+                "collectionDate": "2023-04-05",
+                "debtors": [
+                  {
+                    "debtorReference": "49b59c06-6bfc-4b1a-9bc7-db433aaa5986",
+                    "familiarReference": "ABC-13355",
+                    "sepaMandate": {
+                      "accountHolderName": "Max Mustermann",
+                      "bic": "UCJAES2MXXX",
+                      "iban": "DE75512108001245126199",
+                      "reference": "SMREF200034",
+                      "signedOn": "2020-12-01"
+                    },
+                    "person": {
+                      "firstName": "Max",
+                      "lastName": "Mustermann",
+                      "birthDate": "1998-04-15",
+                      "address": {
+                        "addressLine": "Geschwister-Scholl-Strasse 24A",
+                        "city": "Niddatal",
+                        "countryCode": "DE",
+                        "postalCode": "61194",
+                        "region": "Hesse"
+                      }
+                    },
+                    "debtClaims": [
+                      {
+                        "debtClaimReference": "fd4c07b8-483c-49d1-8d5e-a502c7e53ab2",
+                        "debtClaimAmount": {
+                          "amount": 10.55,
+                          "currencyCode": "EUR"
+                        },
+                        "dueDate": "2023-04-01",
+                        "description": "Monthly Fee, Foo Product, Special Bonus, 2023-04",
+                        "paymentDescription": "Monatsbeitrag 2023/04",
+                        "recurrence": {
+                          "unit": "MONTH",
+                          "value": 1
+                        },
+                        "servicePeriod": {
+                          "startDate": "2023-04-01",
+                          "endDate": "2023-04-30"
+                        },
+                        "type": "PRINCIPAL_CLAIM"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntentSubmissionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/{paymentReference}": {
+      "get": {
+        "summary": "Get the result of a payment",
+        "description": "Will stay in PENDING status until the payment has been fully accepted/rejected.\nIf setup, the client will receive a Webhook-notification with the same payload about the status-details",
+        "operationId": "getPaymentStatusDetails",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "paymentReference",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PaymentReference"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntentResult"
+                },
+                "example": {
+                  "paymentReference": "58c8e533-5a7a-4c66-b0b7-763e903b4605",
+                  "status": "ACCEPTED",
+                  "debtClaims": [
+                    {
+                      "debtClaimAmount": {
+                        "amount": 10.55,
+                        "currencyCode": "EUR"
+                      },
+                      "debtClaimReference": "f3e562e7-14c4-46c8-b9f3-38169e8ec6e5",
+                      "isAccepted": true
+                    },
+                    {
+                      "debtClaimAmount": {
+                        "amount": 8.59,
+                        "currencyCode": "EUR"
+                      },
+                      "debtClaimReference": "1e921942-7cc8-483b-9e92-abd80659d52a",
+                      "isAccepted": false,
+                      "rejectionDetails": {
+                        "reason": "INVALID_SEPA_MANDATE",
+                        "type": "REJECTED_RETRYABLE"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/v1/chargebacks": {
+      "get": {
+        "summary": "Lists all chargebacks",
+        "description": "Lists all chargebacks",
+        "operationId": "listChargebacks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chargebacks"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "chargeback"
+        ]
+      }
+    },
+    "/v1/dunning/details/{uniqueDebtorReference}": {
+      "get": {
+        "summary": "Get status of debtor's debt",
+        "description": "Returns the current status of the debtor's debt",
+        "operationId": "getDunningDetails",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uniqueDebtorReference",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UniqueDebtorReference"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DunningDetails"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "dunning"
+        ]
+      }
+    },
+    "/v1/dunning/resend-login-email": {
+      "post": {
+        "summary": "Re-send login link",
+        "description": "Sends an email to a debtor with login link to payment portal where he can pay off his debt",
+        "operationId": "resendLoginEmail",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UniqueDebtorReferenceDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "dunning"
+        ]
+      }
+    }
+  },
+  "x-webhooks": {
+    "notifications": {
+      "post": {
+        "summary": "Events",
+        "description": "Allows Finion Capital to send real-time notifications to the clients.\nPayload of the webhook notification is minimalistic and carries just the necessary identifiers that can be later used to collect more details via Finion Capital API.\nTo subscribe to the webhook notifications, client needs to expose webhook endpoint as specified below. Every request made by Finion Capital will use HTTPS and will contain hash value to verify the integrity and authenticity  of the request (HMAC).\nTable below documents available event types. The number of available types is supposed to increase over time.\n| Event type    | Description | Details |\n|:-------------:|:-----------:|:-------:|\n| `PAYMENT_INTENT_STATUS_CHANGED` | Informs about the status changes of the submitted Payment Intent | <b>paymentReference</b> - unique identifier for the payment\n",
+        "operationId": "webhook",
+        "security": [
+          {
+            "HMAC": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookPayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "HMAC": {
+        "type": "http",
+        "scheme": "hmac-sha256",
+        "description": "### HMAC Security \n\nTo ensure the integrity and authenticity of the data, all webhook requests contain a header with an HMAC signature. \nThis involves using the SHA-256 hash function and a shared secret, along with the webhook payload, as the input to generate the signature. \nOnce generated, the signature is added to the 'x-fc-signature' HTTP header. \nThe client receiving the webhook requests should validate the signature using the same shared secret key provided during onboarding.\n"
+      },
+      "ApiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "The API key provided to you during onboarding is a token that represents a contract with Finion Capital.\nIf you have multiple contract-relations (e.g. multiple account-numbers) with Finion Capital, you will need a dedicated API key for each individual contract/account-number\n"
+      }
+    },
+    "schemas": {
+      "PaymentReference": {
+        "type": "string",
+        "description": "Unique, stable/non-changing identifier of the `PaymentIntent` (e.g. UUID/GUID).\nThe provided reference is used by the client to check the status of the payment\nand is also used for webhook-callbacks to inform the client about acceptance/rejection of given `DebtClaims`.\nThe client must only provide this identifier *once*, every subsequent payment (e.g. re-submitting already-rejected `DebtClaims` after data-correction) is required to provide a new, different, unique `paymentReference`",
+        "example": "33540612-6170-4a97-818d-15636ce3effe",
+        "maxLength": 100,
+        "minLength": 0
+      },
+      "UniqueDebtorReference": {
+        "type": "string",
+        "description": "Unique, stable/non-changing technical identifier of the Debtor.\nThe client *must* guarantee to keep this identifier stable over all offers,\nchanging this identifier after the debtor was submitted for the first time is a violation of the contractual agreement with Finion Capital",
+        "example": "f8864f6d-7e22-4138-86e5-8782d42560ee",
+        "maxLength": 100,
+        "minLength": 0
+      },
+      "MonetaryAmount": {
+        "type": "object",
+        "description": "Describes monetary amount",
+        "properties": {
+          "amount": {
+            "description": "nominal value",
+            "type": "number",
+            "example": 10.55
+          },
+          "currencyCode": {
+            "type": "string",
+            "description": "ISO 4217-compliant alphabetic currency code, currently ONLY `EUR` is supported",
+            "minLength": 3,
+            "maxLength": 3,
+            "example": "EUR"
+          }
+        },
+        "required": [
+          "amount",
+          "currencyCode"
+        ]
+      },
+      "ContractDate": {
+        "type": "object",
+        "description": "Dates of the contract.\nIf the debt claim is not associated to any contract the contract date is null.",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2020-11-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "startDate"
+        ]
+      },
+      "DebtClaimRecurrence": {
+        "type": "object",
+        "description": "Typical Recurrences are expressed as follows:\n- Yearly:    `value=1, unit=YEAR`\n- Quarterly: `value=3, unit=MONTH`\n- Monthly:   `value=1, unit=MONTH`\n- Weekly:    `value=1, unit=WEEK`\n- Biweekly:  `value=2, unit=WEEK`\n- Once:      `value=1, unit=ONCE`",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "description": "Unit of recurrence / periodicity",
+            "enum": [
+              "ONCE",
+              "DAY",
+              "WEEK",
+              "MONTH",
+              "YEAR"
+            ],
+            "example": "MONTH"
+          },
+          "value": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1
+          }
+        },
+        "required": [
+          "unit",
+          "value"
+        ]
+      },
+      "DebtClaimServicePeriod": {
+        "type": "object",
+        "description": "The Service-Period defines the time-frame in which the service or goods was/will be provided to your customer.\nA DebtClaim with monthly recurrence might have a Service-Period from e.g. `2020-10-01 - 2020-10-31`",
+        "properties": {
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2020-12-01T00:00:00.000Z"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2020-11-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "endDate",
+          "startDate"
+        ]
+      },
+      "DebtClaim": {
+        "type": "object",
+        "description": "Represents a single DebtClaim with a specific reference and amount.\nIf submitted for MemberCash, the specified DebtClaim will be purchased by Finion Capital and subsequently settled via SEPA DirectDebit.\nMultiple DebtClaims may get combined into one transaction with the debtor, possibly containing parts of specified DebtClaim-descriptions.",
+        "properties": {
+          "debtClaimAmount": {
+            "$ref": "#/components/schemas/MonetaryAmount"
+          },
+          "contractDate": {
+            "$ref": "#/components/schemas/ContractDate"
+          },
+          "description": {
+            "type": "string",
+            "description": "Full description of the DebtClaim.\nIf no `paymentDescription` is specified, this may get presented to Payers, e.g. incorporated into the SEPA DirectDebit Remittance Information",
+            "example": "Monthly Fee, Foo Product, Special Bonus, 2020-11",
+            "maxLength": 255,
+            "minLength": 0
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Date when this DebtClaim is due and can be settled with the Debtor.\n\nProducts like MemberCash only allow offered DebtClaims to be already due or eventually become due until the requested date of collection.\nSubmitting old DebtClaims that are already due for a considerable amount of time is a violation of the contractual agreement with Finion Capital",
+            "example": "2020-11-01T00:00:00.000Z"
+          },
+          "paymentDescription": {
+            "type": "string",
+            "description": "Description of the DebtClaim that will get presented to the Debtor if provided, e.g. incorporated into SEPA DirectDebit Transactions",
+            "example": "Monatsbeitrag 2020/11",
+            "maxLength": 255,
+            "minLength": 0
+          },
+          "recurrence": {
+            "$ref": "#/components/schemas/DebtClaimRecurrence"
+          },
+          "servicePeriod": {
+            "$ref": "#/components/schemas/DebtClaimServicePeriod"
+          },
+          "type": {
+            "type": "string",
+            "description": "Predefined type of DebtClaim. If none of the existing types matches, omit or use UNKNOWN",
+            "enum": [
+              "PRINCIPAL_CLAIM",
+              "PURCHASE_CONTRACT",
+              "FLAT_FEE",
+              "UNKNOWN",
+              "CUSTOM"
+            ],
+            "example": "PRINCIPAL_CLAIM"
+          },
+          "debtClaimReference": {
+            "type": "string",
+            "description": "Unique, stable/non-changing technical identifier of the DebtClaim.\nThe client *must* guarantee to keep this identifier stable over all PaymentIntents, changing this identifier after the DebtClaim was submitted for the first time (re-submitting the DebtClaim with a different reference)\nis a violation of the contractual agreement with Finion Capital.",
+            "example": "fd4c07b8-483c-49d1-8d5e-a502c7e53ab2",
+            "maxLength": 100,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "debtClaimAmount",
+          "description",
+          "dueDate",
+          "paymentDescription",
+          "servicePeriod",
+          "debtClaimReference"
+        ]
+      },
+      "SepaMandate": {
+        "type": "object",
+        "required": [
+          "accountHolderName",
+          "iban",
+          "reference",
+          "signedOn"
+        ],
+        "properties": {
+          "accountHolderName": {
+            "type": "string",
+            "description": "The name of the account holder",
+            "maxLength": 70
+          },
+          "bic": {
+            "type": "string",
+            "description": "Bank Identifier Code (BIC), consists of up to 11 characters",
+            "maxLength": 11
+          },
+          "iban": {
+            "type": "string",
+            "description": "International Bank Account Number (IBAN), consists of up to 34 alphanumeric characters comprising a country code",
+            "maxLength": 34
+          },
+          "reference": {
+            "type": "string",
+            "description": "Reference string related to the mandate.",
+            "maxLength": 35
+          },
+          "signedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "The date when the mandate was signed"
+          }
+        }
+      },
+      "DebtorAddress": {
+        "type": "object",
+        "description": "Definition of the SEPA Mandate that is required to process SEPA Direct Debit with the debtor.\nThe client is responsible to provide valid, signed SEPA Mandates as per contractual agreement with Finion Capital.\nProviding invalid, disputed or revoked SEPA Mandates may cause late chargebacks of DebtClaims including incurred costs/fees.",
+        "properties": {
+          "addressLine": {
+            "type": "string",
+            "description": "Full Address-Line including Street and Housenumber, Appartment-Info, Floor-Indicators etc.",
+            "example": "Some Street 17b, Apartment 3, 1. Floor",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "city": {
+            "type": "string",
+            "description": "City/Town/Village",
+            "example": "Hamburg",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "countryCode": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 Country Code, e.g. Germany: DE, Spain: ES",
+            "example": "DE",
+            "maxLength": 2,
+            "minLength": 2
+          },
+          "postalCode": {
+            "type": "string",
+            "description": "Country-specific PostalCode",
+            "example": "20095",
+            "maxLength": 10,
+            "minLength": 1
+          },
+          "region": {
+            "type": "string",
+            "description": "optional region-description, e.g. Germany: Bundesland, Spain: Province, USA: Country",
+            "example": "Schleswig-Holstein",
+            "maxLength": 100,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "addressLine",
+          "city",
+          "countryCode",
+          "postalCode"
+        ]
+      },
+      "Gender": {
+        "type": "string",
+        "description": "Gender of the related person",
+        "enum": [
+          "FEMALE",
+          "MALE",
+          "DIVERSE"
+        ],
+        "example": "FEMALE"
+      },
+      "Person": {
+        "type": "object",
+        "description": "Personal information about the Debtor. The client is required to provide up-to-date, correct data as per the contractual agreement with Finion Capital.\nProviding invalid data that leads to uncollectible DebtClaims may cause late chargebacks of DebtClaims including incurred costs/fees",
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/DebtorAddress"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "firstName": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 0
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "address",
+          "birthDate",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "DebtorContactDetails": {
+        "type": "object",
+        "description": "Contact details required for `MemberCash`. Prividing them increases the success rate of potential dunning process.\n",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "e-mail address to contact debtor",
+            "example": "payer@gmoo.com",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "phone": {
+            "type": "string",
+            "description": "ITU E.164 Telephone-Number in international ITU E.164 format (plus sign, followed by country code and phone number)",
+            "example": 49402286790,
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "mobile": {
+            "type": "string",
+            "description": "Number of mobile device in international ITU E.164 format (plus sign, followed by country code and phone number)",
+            "example": 491608066077,
+            "maxLength": 100,
+            "minLength": 0
+          }
+        }
+      },
+      "LegalRepresentativePerson": {
+        "type": "object",
+        "description": "Personal information about the legal representative.",
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/DebtorAddress"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "firstName": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 0
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName"
+        ]
+      },
+      "LegalRepresentative": {
+        "type": "object",
+        "description": "Information about the Legal-Representative of the debtor, if any, like parents for the underaged debtor or authorized lawyers.\nProviding underaged Debtors without any legal representation may cause immediate offer-rejections or late chargebacks of DebtClaims including incurred costs/fees.",
+        "properties": {
+          "contacts": {
+            "$ref": "#/components/schemas/DebtorContactDetails"
+          },
+          "sepaMandate": {
+            "$ref": "#/components/schemas/SepaMandate"
+          },
+          "person": {
+            "$ref": "#/components/schemas/LegalRepresentativePerson"
+          }
+        },
+        "required": [
+          "contacts",
+          "person"
+        ]
+      },
+      "Debtor": {
+        "type": "object",
+        "description": "Represents the debtor/person that owes specified DebtClaims. Finion Capital will try to settle DebtClaims with this person and if this fails, will initiate a dunning process.",
+        "properties": {
+          "debtorReference": {
+            "$ref": "#/components/schemas/UniqueDebtorReference"
+          },
+          "familiarReference": {
+            "type": "string",
+            "description": "Reference that is known/familiar to the Debtor and can be used in communication.\nIn Gyms/Fitness-Studios this is commonly the Membership-Number that is also printed on access-cards and generally known to the debtor",
+            "example": "ABC-13355",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "debtClaims": {
+            "description": "List of Debtor's debt claims that will be combined into single transaction.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DebtClaim"
+            },
+            "maxItems": 100,
+            "minItems": 1
+          },
+          "sepaMandate": {
+            "$ref": "#/components/schemas/SepaMandate"
+          },
+          "person": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "contacts": {
+            "$ref": "#/components/schemas/DebtorContactDetails"
+          },
+          "legalRepresentative": {
+            "$ref": "#/components/schemas/LegalRepresentative"
+          }
+        },
+        "required": [
+          "debtorReference",
+          "familiarReference",
+          "debtClaims",
+          "sepaMandate",
+          "person"
+        ]
+      },
+      "PaymentIntent": {
+        "type": "object",
+        "description": "Payment parameters that contain `DebtClaims` for specific `Debtor`",
+        "properties": {
+          "paymentReference": {
+            "$ref": "#/components/schemas/PaymentReference"
+          },
+          "product": {
+            "type": "string",
+            "description": "Finion Capital-Product you want to submit a Payment Intent for, e.g. ",
+            "enum": [
+              "MEMBERCASH",
+              "FINION_DIRECTDEBIT"
+            ],
+            "example": "MEMBERCASH"
+          },
+          "accountNumber": {
+            "type": "string",
+            "description": "8-digit Account-Number assigned by Finion Capital to the client",
+            "example": "20123400",
+            "maxLength": 8,
+            "minLength": 8,
+            "pattern": "[0-9]{8}"
+          },
+          "collectionDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Date on which the collection should occur, e.g. the SEPA Direct Debit will occur.\nIf the date is invalid and can not be used (e.g. Sundays or special Holidays are used), Finion Capital will select the next working collection-date.\nIf you provide 01.01.2020 for a SEPA DirectDebit Offer, Finion Capital will discard that date silently (because SEPA DirectDebit is not processable on that holiday)\nand instead automatically choose 02.01.2020 as collectiondate.\nIf you provide 06.01.2020, Finion Capital will use that date for a SEPA DirectDebit",
+            "example": "2020-11-01T00:00:00.000Z"
+          },
+          "debtors": {
+            "type": "array",
+            "description": "list of debtors",
+            "items": {
+              "$ref": "#/components/schemas/Debtor"
+            },
+            "maxItems": 100000,
+            "minItems": 0
+          }
+        },
+        "required": [
+          "paymentReference",
+          "product",
+          "accountNumber",
+          "collectionDate",
+          "debtors"
+        ]
+      },
+      "PaymentIntentStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "ACCEPTED"
+        ]
+      },
+      "PaymentIntentSubmissionResult": {
+        "properties": {
+          "paymentReference": {
+            "$ref": "#/components/schemas/PaymentReference"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentIntentStatus"
+          }
+        },
+        "required": [
+          "paymentReference",
+          "status"
+        ]
+      },
+      "ApiErrorObject": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "INTERNAL_ERROR",
+              "NOT_FOUND",
+              "NOT_ALLOWED",
+              "INVALID_DATA",
+              "MISSING_FIELD"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ApiErrorResponse": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiErrorObject"
+            }
+          },
+          "requestId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "errors",
+          "requestId"
+        ]
+      },
+      "DebtClaimRejection": {
+        "type": "object",
+        "description": "Rejection of a DebtClaim specifying both type and reason of rejection.\nAny decision on how to deal with a rejection must take both fields into account, you might be presented with both a (`FINAL`, `PURCHASING_SUSPENDED`) and a (`RETRYABLE`, `PURCHASING_SUSPENDED`).\nYou can only remedy the `RETRYABLE` rejection and eventually re-submit the DebtClaim, whereas the `FINAL` rejection is non-recoverable - irregardless of reason.\n\nMost common business reasons are the following 2 situations:\n* First, and quantitatively by far the most common, is the purchase limit which means that there were some (2-4, depending on collection frequency) direct-debit reversals in a row.\nIn this case, these debt claims usually get forwarded to our collection agency partner Finion FairPay GmbH automatically. The collection proceedings at Finion FairPay can be accessed via their API.\n\n* Second is a missing legal representative for a minor where a direct-debit reversal occurred, which can be remedied by presenting a legal rep. for the debtor/member and then re-submitting the fixed DebtClaim with updated debtor/member/legal-rep information.",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "\n* `PURCHASE_LIMIT`: Threshold of uncollectible/failing DebtClaims for Debtor was reached, therefore new DebtClaims for this Debtor are rejected\n* `PURCHASING_SUSPENDED`: Purchasing/Acceptance of client has been (temporarily) been suspended, no DebtClaims will currently be accepted\n* `INVALID_SEPA_MANDATE`: Provided SEPA-Mandate is invalid, either contains invalid/incomplete data or has been invalidated by failing SEPA Direct-Debit Transactions\n* `INVALID_OR_INCOMPLETE_PERSONAL_INFORMATION`: Information about the Person like Name, BirthDate etc. is invalid or incomplete, please correct\n* `INVALID_OR_INCOMPLETE_ADDRESS`: Address is invalid or incomplete, please correct\n* `INVALID_DEBTCLAIM`: The DebtClaim is invalid, most probably due to its amount or type\n* `ALREADY_ACCEPTED_OR_REJECTED`: DebtClaim was already offered and already purchased/accepted or rejected\n* `ALREADY_CHARGED_BACK`: DebtClaim has been charged back, another offer of such a charged back DebtClaim is thus rejected\n* `DEBTOR_PERMAMENT_DEFAULT`: Debtor permanently defaulted suffers permamently hardship, reasons include decease or insolvency\n* `DEBTOR_DISPUTE`: Debtor has contested or terminated the contract with the client",
+            "enum": [
+              "PURCHASE_LIMIT",
+              "PURCHASING_SUSPENDED",
+              "INVALID_SEPA_MANDATE",
+              "INVALID_OR_INCOMPLETE_PERSONAL_INFORMATION",
+              "INVALID_OR_INCOMPLETE_ADDRESS",
+              "INVALID_DEBTCLAIM",
+              "ALREADY_ACCEPTED_OR_REJECTED",
+              "ALREADY_CHARGED_BACK",
+              "DEBTOR_PERMAMENT_DEFAULT",
+              "DEBTOR_DISPUTE",
+              "OTHER"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "description": "\n* `REJECTED_FINAL`: DebtClaim was finally rejected: Re-offering the DebtClaim is not possible and would lead to `ALREADY_ACCEPTED_OR_REJECTED`\n* `REJECTED_COLLECTION_AGENCY`: DebtClaim was rejected and automatically forwarded for you to a Collection-Agency. Re-offering the DebtClaim is not possible and would lead to ALREADY_ACCEPTED_OR_REJECTED\n* `REJECTED_RETRYABLE`: DebtClaim was rejected for recoverable reasons. Remediation and re-offering of the DebtClaim is accepted and expected\n",
+            "enum": [
+              "REJECTED_FINAL",
+              "REJECTED_COLLECTION_AGENCY",
+              "REJECTED_RETRYABLE"
+            ]
+          }
+        },
+        "required": [
+          "reason",
+          "type"
+        ]
+      },
+      "DebtClaimAcceptance": {
+        "type": "object",
+        "description": "Individual DebtClaim that was either accepted or rejected.\nIf rejected, the type of rejection and reason for rejection are specified",
+        "properties": {
+          "debtClaimAmount": {
+            "$ref": "#/components/schemas/MonetaryAmount"
+          },
+          "debtClaimReference": {
+            "type": "string"
+          },
+          "isAccepted": {
+            "type": "boolean",
+            "description": "Whether the offered DebtClaim was accepted or rejected"
+          },
+          "rejectionDetails": {
+            "$ref": "#/components/schemas/DebtClaimRejection"
+          }
+        },
+        "required": [
+          "debtClaimAmount",
+          "debtClaimReference",
+          "isAccepted"
+        ]
+      },
+      "PaymentIntentResult": {
+        "type": "object",
+        "description": "A PaymentIntent is processed, assessed and eventually accepted.\nFor each individual DebtClaim of a PaymentIntent, the Acceptance specifies whether the DebtClaim was either accepted or rejected.\nIf rejected, the type of rejection and reason for rejection are specified.\nThis data structure is also sent to the Acceptance-Webhook if setup",
+        "properties": {
+          "paymentReference": {
+            "$ref": "#/components/schemas/PaymentReference"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentIntentStatus"
+          },
+          "debtClaims": {
+            "type": "array",
+            "description": "Individual DebtClaim that was either accepted or rejected.\nIf rejected, the type of rejection and reason for rejection are specified",
+            "items": {
+              "$ref": "#/components/schemas/DebtClaimAcceptance"
+            }
+          }
+        },
+        "required": [
+          "paymentReference",
+          "status",
+          "debtClaims"
+        ]
+      },
+      "ChargebackAdditionalFee": {
+        "type": "object",
+        "description": "\nSometimes also fees that were imposed on Finion are charged back.\nThese were most likely caused by invalid/uncollectible DebtClaims.\nSuch charged back Fees are usually caused by multiple DebtClaims.\nExample: 3 DebtClaims were SEPA DirectDebited as a sum in 1 single Transaction.\nThis transaction failed and caused a Bank-Reversal-Fee. The Bank-Reversal-Fee is thus caused by those 3 DebtClaims.\n\nImportant: The causing DebtClaims do *not* necessarily get charged back in this chargeback-notification.\nEither they were already charged back in a former Notification,\nor only a subset is charged back in this notification\nor none of the causing DebtClaims is/will be charged back at all",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "causedByDebtClaimReferences": {
+            "type": "array",
+            "description": "Describes which DebtClaims have caused the creation of this fee.",
+            "items": {
+              "type": "string",
+              "description": "Describes which DebtClaims have caused the creation of this fee."
+            },
+            "maxItems": 1000000,
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "type": {
+            "type": "string",
+            "description": "`BANK_FEE`: Fee that was charged by the Bank, e.g. due to reversal of a SEPA Direct Debit transaction\n",
+            "enum": [
+              "BANK_FEE"
+            ]
+          }
+        },
+        "required": [
+          "amount",
+          "causedByDebtClaimReferences",
+          "reference",
+          "type"
+        ]
+      },
+      "ChargedBackDebtClaim": {
+        "type": "object",
+        "description": "DebtClaim that was charged back in this chargeback-process.",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "canResubmit": {
+            "type": "boolean",
+            "description": "Describes whether this debtClaim can be re-offered."
+          },
+          "chargebackReason": {
+            "type": "string",
+            "description": "\n* `INSTRUCTED_BY_CLIENT`: Chargeback in accordance with or as requested by client.\n* `MISSING_LEGAL_REPRESENTATIVE`: Legal representation (e.g. parents of an underaged debtor) is not specified.\n* `INVALID_SEPA_MANDATE`: The Sepa Mandate was invalidated and is not suitable for any SEPA Direct Debit processing. \\\nReasons are commonly explicit revocations by the debtor or closed bank accounts.\n* `CLIENT_CONTRACT_ENDED`: Our contractual agreement was already terminated.\n* `INVALID_DEBTCLAIM`: Debt claim is invalid (e.g. due date overaged/lapsed).\n* `DEBTOR_PERMANENT_DEFAULT`: Debtor permanently defaulted, e.g. due to insolvency or decease\n* `DUNNING_UNSUCCESSFUL`: Dunning unsuccessful and forwarding to collection office is not enabled.\n* `PAYMENT_UNSUCCESSFUL`: Payment failed, instantly charging back as per contractual agreement.\n* `CLIENT_TEMPORARILY_OUT_OF_SERVICE`: Client is determined as being temporarily out of service (e.g. COVID-19 closedown).\n* `OTHER`: Please contact us for further details.\n\t\t\t",
+            "enum": [
+              "INSTRUCTED_BY_CLIENT",
+              "MISSING_LEGAL_REPRESENTATIVE",
+              "INVALID_SEPA_MANDATE",
+              "CLIENT_CONTRACT_ENDED",
+              "INVALID_DEBTCLAIM",
+              "DEBTOR_PERMANENT_DEFAULT",
+              "DUNNING_UNSUCCESSFUL",
+              "PAYMENT_UNSUCCESSFUL",
+              "CLIENT_TEMPORARILY_OUT_OF_SERVICE",
+              "OTHER"
+            ]
+          },
+          "debtClaimReference": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "offerReference": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "amount",
+          "canResubmit",
+          "chargebackReason",
+          "debtClaimReference",
+          "offerReference"
+        ]
+      },
+      "Chargeback": {
+        "type": "object",
+        "description": "Describes which DebtClaim were charged back and which additional fees emerged and are part of this chargeback. \\\nThis data structure is also sent to the Chargeback-Webhook if setup",
+        "properties": {
+          "additionalFees": {
+            "type": "array",
+            "description": "\nSometimes also fees that were imposed on Finion are charged back.\nThese were most likely caused by invalid/uncollectible DebtClaims.\nSuch charged back Fees are usually caused by multiple DebtClaims.\nExample: 3 DebtClaims were SEPA DirectDebited as a sum in 1 single Transaction. \\\nThis transaction failed and caused a Bank-Reversal-Fee. The Bank-Reversal-Fee is thus caused by those 3 DebtClaims.\n\nImportant: The causing DebtClaims do *not* necessarily get charged back in this chargeback-notification.\nEither they were already charged back in a former Notification,\nor only a subset is charged back in this notification\nor none of the causing DebtClaims is/will be charged back at all",
+            "items": {
+              "$ref": "#/components/schemas/ChargebackAdditionalFee"
+            },
+            "maxItems": 1000000,
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "chargebackReason": {
+            "type": "string",
+            "description": "\n* `INSTRUCTED_BY_CLIENT`: Chargeback in accordance with or as requested by client.\n* `MISSING_LEGAL_REPRESENTATIVE`: Legal representation (e.g. parents of an underaged debtor) is not specified.\n* `INVALID_SEPA_MANDATE`: The Sepa Mandate was invalidated and is not suitable for any SEPA Direct Debit processing. \\\nReasons are commonly explicit revocations by the debtor or closed bank accounts.\n* `CLIENT_CONTRACT_ENDED`: Our contractual agreement was already terminated.\n* `INVALID_DEBTCLAIM`: Debt claim is invalid (e.g. due date overaged/lapsed).\n* `DEBTOR_PERMANENT_DEFAULT`: Debtor permanently defaulted, e.g. due to insolvency or decease\n* `DUNNING_UNSUCCESSFUL`: Dunning unsuccessful and forwarding to collection office is not enabled.\n* `PAYMENT_UNSUCCESSFUL`: Payment failed, instantly charging back as per contractual agreement.\n* `CLIENT_TEMPORARILY_OUT_OF_SERVICE`: Client is determined as being temporarily out of service (e.g. COVID-19 closedown).\n* `OTHER`: Please contact us for further details.\n\t\t\t",
+            "enum": [
+              "INSTRUCTED_BY_CLIENT",
+              "MISSING_LEGAL_REPRESENTATIVE",
+              "INVALID_SEPA_MANDATE",
+              "CLIENT_CONTRACT_ENDED",
+              "INVALID_DEBTCLAIM",
+              "DEBTOR_PERMANENT_DEFAULT",
+              "DUNNING_UNSUCCESSFUL",
+              "PAYMENT_UNSUCCESSFUL",
+              "CLIENT_TEMPORARILY_OUT_OF_SERVICE",
+              "OTHER"
+            ]
+          },
+          "chargedBackDebtClaims": {
+            "type": "array",
+            "description": "DebtClaim that was charged back in this chargeback-process.",
+            "items": {
+              "$ref": "#/components/schemas/ChargedBackDebtClaim"
+            },
+            "maxItems": 1000000,
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "type": {
+            "type": "string",
+            "description": "\n* `CREATED`: Chargeback was created and will be deducted from the next Payout/Invoice.\n* `INVOICED`: Chargeback is already deducted from the Payout/Invoice.\n* `CANCELLED`: Chargeback was cancelled and will not be deducted from the next Payout/Invoice. \\\nIf the chargeback was already deducted, you will receive a compensating credit with the next Payout/Invoice.\n\t\t\t",
+            "enum": [
+              "CREATED",
+              "INVOICED",
+              "CANCELLED"
+            ]
+          }
+        },
+        "required": [
+          "additionalFees",
+          "chargebackReason",
+          "chargedBackDebtClaims",
+          "type"
+        ]
+      },
+      "Paging": {
+        "type": "object",
+        "description": "Information about paging of result-sets",
+        "properties": {
+          "currentPage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasMorePages": {
+            "type": "boolean"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "currentPage",
+          "currentSize",
+          "hasMorePages",
+          "totalPages"
+        ]
+      },
+      "Chargebacks": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Describes which DebtClaim were charged back and which additional fees emerged and are part of this chargeback. \\\nThis data structure is also sent to the Chargeback-Webhook if setup",
+            "items": {
+              "$ref": "#/components/schemas/Chargeback"
+            },
+            "maxItems": 100,
+            "minItems": 0
+          },
+          "paging": {
+            "$ref": "#/components/schemas/Paging"
+          }
+        },
+        "required": [
+          "data",
+          "paging"
+        ]
+      },
+      "DunningDetails": {
+        "type": "object",
+        "description": "Represents dunning specific details about a debtor.",
+        "properties": {
+          "openAmount": {
+            "type": "number",
+            "description": "Amount of outstanding debts to Finion-Capital. A negative amount represents an overpayment."
+          },
+          "uniqueDebtorReference": {
+            "type": "string",
+            "description": "Unique, stable/non-changing technical identifier of the Debtor.",
+            "example": "f8864f6d-7e22-4138-86e5-8782d42560ee"
+          }
+        },
+        "required": [
+          "openAmount",
+          "uniqueDebtorReference"
+        ]
+      },
+      "UniqueDebtorReferenceDto": {
+        "type": "object",
+        "properties": {
+          "uniqueDebtorReference": {
+            "$ref": "#/components/schemas/UniqueDebtorReference"
+          }
+        },
+        "required": [
+          "uniqueDebtorReference"
+        ]
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date and time at which the event occurred"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of the notification event. Can be any of the values described in the event types table in the webhook endpoint documentation.",
+            "example": "DEBTOR_PAYMENT"
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "A map that contains all related information about the event",
+            "example": {
+              "debtorPaymentReference": "f12cba2c-963d-4473-8023-e3819c945dcb"
+            }
+          }
+        }
+      },
+      "WebhookPayload": {
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "unique identifier of the notification event"
+          },
+          "payload": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            },
+            "description": "An array of notification events"
+          }
+        }
+      }
+    }
+  }
+}
